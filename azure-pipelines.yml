@@ -1,0 +1,119 @@
+trigger:
+- main
+
+variables:
+  dockerRegistryServiceConnection: 'acr-service-connection'
+  imageRepositoryBackend: 'backend'
+  imageRepositoryFrontend: 'frontend'
+  containerRegistry: 'mylmsacr.azurecr.io'
+  tag: '$(Build.BuildId)'
+  vmImageName: 'ubuntu-latest'
+  trivyVersion: '0.49.1' # Update to the latest version if needed
+
+stages:
+- stage: Build
+  displayName: Build and Scan stage
+  jobs:
+  - job: BuildAndScan
+    displayName: Build and Scan
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    # Build and push backend image
+    - task: Docker@2
+      displayName: Build and push backend image
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepositoryBackend)
+        dockerfile: '$(Build.SourcesDirectory)/backend/Dockerfile'
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+
+    # Build and push frontend image
+    - task: Docker@2
+      displayName: Build and push frontend image
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepositoryFrontend)
+        dockerfile: '$(Build.SourcesDirectory)/frontend/Dockerfile'
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+
+    # Install Trivy
+    - script: |
+        sudo apt-get update
+        sudo apt-get install -y wget
+        wget https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_Linux-64bit.tar.gz
+        tar zxvf trivy_$(trivyVersion)_Linux-64bit.tar.gz
+        sudo mv trivy /usr/local/bin/
+        trivy --version
+      displayName: Install Trivy
+
+    # Scan backend image
+    - task: CmdLine@2
+      displayName: Run Trivy scan on backend image
+      inputs:
+        script: |
+          trivy image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" -o $(Build.ArtifactStagingDirectory)/junit-report-backend.xml --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryBackend):$(tag)
+      continueOnError: true
+
+    # Scan frontend image
+    - task: CmdLine@2
+      displayName: Run Trivy scan on frontend image
+      inputs:
+        script: |
+          trivy image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" -o $(Build.ArtifactStagingDirectory)/junit-report-frontend.xml --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryFrontend):$(tag)
+      continueOnError: true
+
+    # Publish Trivy scan results
+    - task: PublishTestResults@2
+      displayName: Publish Trivy scan results
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: '$(Build.ArtifactStagingDirectory)/junit-report-*.xml'
+        mergeTestResults: true
+        failTaskOnFailedTests: true
+        testRunTitle: 'Trivy Vulnerability Scan'
+      condition: always()
+
+    # Publish manifests as pipeline artifact
+    - task: PublishPipelineArtifact@1
+      inputs:
+        targetPath: '$(Build.SourcesDirectory)/manifests'
+        artifact: 'manifests'
+        publishLocation: 'pipeline'
+
+- stage: Deploy
+  displayName: Deploy stage
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: Deploy
+    displayName: Deploy to AKS
+    environment: 'myapp.default'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - task: KubernetesManifest@0
+            displayName: Create imagePullSecret
+            inputs:
+              action: createSecret
+              secretName: 'acr-secret'
+              dockerRegistryEndpoint: $(dockerRegistryServiceConnection)
+          - task: KubernetesManifest@0
+            displayName: Deploy to Kubernetes cluster
+            inputs:
+              action: deploy
+              kubernetesServiceConnection: 'azure-service-connection'
+              namespace: 'default'
+              manifests: |
+                $(Pipeline.Workspace)/manifests/backend-deployment.yml
+                $(Pipeline.Workspace)/manifests/frontend-deployment.yml
+              imagePullSecrets: |
+                acr-secret
+              containers: |
+                $(containerRegistry)/$(imageRepositoryBackend):$(tag)
+                $(containerRegistry)/$(imageRepositoryFrontend):$(tag)
