@@ -8,7 +8,7 @@ variables:
   containerRegistry: 'mylmsacr.azurecr.io'
   tag: '$(Build.BuildId)'
   vmImageName: 'ubuntu-latest'
-  trivyVersion: '0.49.1' # Update to the latest version if needed
+  trivyVersion: '0.49.1'
 
 stages:
 - stage: Build
@@ -42,28 +42,37 @@ stages:
           $(tag)
 
     # Install Trivy
-    - script: |
-        sudo apt-get update
-        sudo apt-get install -y wget
-        wget https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_Linux-64bit.tar.gz
-        tar zxvf trivy_$(trivyVersion)_Linux-64bit.tar.gz
-        sudo mv trivy /usr/local/bin/
-        trivy --version
+    - task: AzureCLI@2
       displayName: Install Trivy
+      inputs:
+        azureSubscription: 'azure-service-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          curl -sfL https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_Linux-64bit.tar.gz -o trivy.tar.gz
+          tar zxvf trivy.tar.gz
+          sudo mv trivy /usr/local/bin/
+          trivy --version
 
     # Scan backend image
-    - task: CmdLine@2
+    - task: AzureCLI@2
       displayName: Run Trivy scan on backend image
       inputs:
-        script: |
+        azureSubscription: 'azure-service-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
           trivy image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" -o $(Build.ArtifactStagingDirectory)/junit-report-backend.xml --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryBackend):$(tag)
       continueOnError: true
 
     # Scan frontend image
-    - task: CmdLine@2
+    - task: AzureCLI@2
       displayName: Run Trivy scan on frontend image
       inputs:
-        script: |
+        azureSubscription: 'azure-service-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
           trivy image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" -o $(Build.ArtifactStagingDirectory)/junit-report-frontend.xml --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryFrontend):$(tag)
       continueOnError: true
 
@@ -92,17 +101,19 @@ stages:
   jobs:
   - deployment: Deploy
     displayName: Deploy to AKS
-    environment: 'myapp.default'
     strategy:
       runOnce:
         deploy:
           steps:
+          # Create imagePullSecret
           - task: KubernetesManifest@0
             displayName: Create imagePullSecret
             inputs:
               action: createSecret
               secretName: 'acr-secret'
               dockerRegistryEndpoint: $(dockerRegistryServiceConnection)
+
+          # Deploy backend and frontend
           - task: KubernetesManifest@0
             displayName: Deploy to Kubernetes cluster
             inputs:
