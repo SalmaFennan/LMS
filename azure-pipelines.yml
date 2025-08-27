@@ -160,16 +160,26 @@ stages:
               arguments: 'deployment backend frontend'
             continueOnError: true
 
-          # Nettoyer les anciens secrets
+          # Nettoyer l'ancien secret ACR seulement
           - task: Kubernetes@1
-            displayName: Cleanup old secrets
+            displayName: Cleanup old ACR secret
             inputs:
               connectionType: 'Kubernetes Service Connection'
               kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
               namespace: 'default'
               command: 'delete'
-              arguments: 'secret acr-secret frontend-secrets'
+              arguments: 'secret acr-secret'
             continueOnError: true
+
+          # Appliquer vos secrets personnalisés AVANT de créer le secret ACR
+          - task: KubernetesManifest@0
+            displayName: Apply custom secrets (backend & frontend)
+            inputs:
+              action: deploy
+              kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+              namespace: 'default'
+              manifests: |
+                $(Pipeline.Workspace)/manifests/secrets.yaml
 
           # Create imagePullSecret for ACR
           - task: KubernetesManifest@0
@@ -183,24 +193,14 @@ stages:
               containerRegistryType: 'Container Registry'
               dockerRegistryEndpoint: '$(dockerRegistryServiceConnection)'
 
-          # Create frontend application secrets
-          - task: Kubernetes@1
-            displayName: Create frontend environment secrets
-            inputs:
-              connectionType: 'Kubernetes Service Connection'
-              kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
-              namespace: 'default'
-              command: 'create'
-              arguments: 'secret generic frontend-secrets --from-literal=VITE_API_URL=http://backend-service --from-literal=VITE_FEATURE_PAYMENTS_ENABLED=true --from-literal=VITE_FEATURE_REPORTS_ENABLED=true'
-
           # Attendre un peu pour que les secrets soient créés
           - task: PowerShell@2
             displayName: Wait for secrets creation
             inputs:
               targetType: 'inline'
               script: |
-                Write-Host "Waiting 10 seconds for secrets to be properly created..."
-                Start-Sleep -Seconds 10
+                Write-Host "Waiting 15 seconds for secrets to be properly created..."
+                Start-Sleep -Seconds 15
                 Write-Host "Ready to deploy applications"
 
           # Deploy manifests avec configuration optimisée
@@ -213,8 +213,6 @@ stages:
               manifests: |
                 $(Pipeline.Workspace)/manifests/backend-deployment.yml
                 $(Pipeline.Workspace)/manifests/frontend-deployment.yml
-              imagePullSecrets: |
-                acr-secret
               containers: |
                 $(containerRegistry)/$(imageRepositoryBackend):$(tag)
                 $(containerRegistry)/$(imageRepositoryFrontend):$(tag)
@@ -228,5 +226,5 @@ stages:
               kubernetesServiceEndpoint: '$(kubernetesServiceConnection)'
               namespace: 'default'
               command: 'get'
-              arguments: 'pods,deployments,services -o wide'
+              arguments: 'pods,deployments,services,secrets -o wide'
             condition: always()

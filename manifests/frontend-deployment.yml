@@ -13,11 +13,32 @@ spec:
       labels:
         app: frontend
     spec:
+      imagePullSecrets:
+      - name: acr-secret   # 🔑 UN SEUL imagePullSecret ici
       containers:
       - name: frontend
-        image: mylmsacr.azurecr.io/frontend:$(tag)
+        image: mylmsacr.azurecr.io/frontend:placeholder # sera remplacé par le pipeline
         ports:
-        - containerPort: 5173  # ou 5173 si ton frontend écoute sur ce port
+        - containerPort: 5173
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5173
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5173
+          initialDelaySeconds: 10
+          periodSeconds: 5
         env:
         - name: VITE_API_BASE_URL
           valueFrom:
@@ -49,5 +70,3 @@ spec:
             secretKeyRef:
               name: frontend-secrets
               key: VITE_FEATURE_REPORTS_ENABLED
-      imagePullSecrets:
-      - name: acr-secret   # 🔑 ajoute l’usage du secret ACR
