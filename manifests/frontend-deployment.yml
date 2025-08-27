@@ -15,25 +15,37 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: mylmsacr.azurecr.io/frontend:latest
+        image: mylmsacr.azurecr.io/frontend:v1
         ports:
-        - containerPort: 80
+        - containerPort: 80  # Change to 5173 if your frontend uses that port in production
         env:
         - name: VITE_API_BASE_URL
-          value: "http://backend-service:3000"
+          valueFrom:
+            secretKeyRef:
+              name: frontend-secrets
+              key: VITE_API_BASE_URL
+        - name: VITE_API_TIMEOUT
+          valueFrom:
+            secretKeyRef:
+              name: frontend-secrets
+              key: VITE_API_TIMEOUT
         - name: VITE_APP_ENV
-          value: "production"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: frontend-service
-  namespace: default
-spec:
-  selector:
-    app: frontend
-  ports:
-  - protocol: TCP
-    port: 80
-    targetPort: 80
-  type: LoadBalancer
+          valueFrom:
+            secretKeyRef:
+              name: frontend-secrets
+              key: VITE_APP_ENV
+        - name: VITE_APP_VERSION
+          valueFrom:
+            secretKeyRef:
+              name: frontend-secrets
+              key: VITE_APP_VERSION
+        - name: VITE_FEATURE_PAYMENTS_ENABLED
+          valueFrom:
+            secretKeyRef:
+              name: frontend-secrets
+              key: VITE_FEATURE_PAYMENTS_ENABLED
+        - name: VITE_FEATURE_REPORTS_ENABLED
+          valueFrom:
+            secretKeyRef:
+              name: frontend-secrets
+              key: VITE_FEATURE_REPORTS_ENABLED

@@ -15,41 +15,62 @@ spec:
     spec:
       containers:
       - name: backend
-        image: mylmsacr.azurecr.io/backend:latest
+        image: mylmsacr.azurecr.io/backend:v1
         ports:
         - containerPort: 3000
         env:
         - name: NODE_ENV
-          value: "production"
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: NODE_ENV
         - name: PORT
-          value: "3000"
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: PORT
         - name: FRONTEND_URL
-          value: "http://frontend-service"
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: FRONTEND_URL
         - name: DB_HOST
-          value: "your-mysql-host" # Update with your MySQL host
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: DB_HOST
         - name: DB_USER
-          value: "root"
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: DB_USER
         - name: DB_PASSWORD
-          value: "" # Use a secret in production
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: DB_PASSWORD
         - name: DB_NAME
-          value: "gymdb"
-        - name: CLOUDINARY_CLOUD_NAME
-          value: "your_cloud_name"
-        - name: CLOUDINARY_API_KEY
-          value: "your_api_key"
-        - name: CLOUDINARY_API_SECRET
-          value: "your_api_secret"
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: backend-service
-  namespace: default
-spec:
-  selector:
-    app: backend
-  ports:
-  - protocol: TCP
-    port: 3000
-    targetPort: 3000
-  type: ClusterIP
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: DB_NAME
+        - name: DB_CONNECTION_LIMIT
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: DB_CONNECTION_LIMIT
+        - name: DB_QUEUE_LIMIT
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: DB_QUEUE_LIMIT
+        - name: ALLOWED_METHODS
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: ALLOWED_METHODS
+        - name: ALLOWED_HEADERS
+          valueFrom:
+            secretKeyRef:
+              name: backend-secrets
+              key: ALLOWED_HEADERS
