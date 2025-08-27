@@ -17,7 +17,7 @@ spec:
       - name: acr-secret
       containers:
       - name: frontend
-        image: mylmsacr.azurecr.io/frontend:placeholder
+        image: mylmsacr.azurecr.io/frontend:v4
         ports:
         - containerPort: 80  # CORRIGÉ: Nginx écoute sur le port 80
         resources:
