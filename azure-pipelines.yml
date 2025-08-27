@@ -3,7 +3,7 @@ trigger:
 
 variables:
   dockerRegistryServiceConnection: 'LmsDR'
-  kubernetesServiceConnection: 'LmsKubernetes'
+  kubernetesServiceConnection: 'LmsKubernetes'  # <- nom exact de ta connexion
   imageRepositoryBackend: 'backend'
   imageRepositoryFrontend: 'frontend'
   containerRegistry: 'mylmsacr.azurecr.io'
@@ -111,18 +111,25 @@ stages:
       runOnce:
         deploy:
           steps:
+          # Create imagePullSecret using kubernetesServiceConnection
           - task: KubernetesManifest@0
             displayName: Create imagePullSecret
             inputs:
               action: createSecret
               secretName: 'acr-secret'
-              dockerRegistryEndpoint: $(dockerRegistryServiceConnection)
+              secretType: 'dockerRegistry'
+              kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+              namespace: 'default'
+              containerRegistryType: 'Azure Container Registry'
+              azureSubscriptionEndpoint: '$(dockerRegistryServiceConnection)'
+              azureContainerRegistry: '$(containerRegistry)'
 
+          # Deploy manifests
           - task: KubernetesManifest@0
             displayName: Deploy to Kubernetes cluster
             inputs:
               action: deploy
-              kubernetesServiceConnection: $(kubernetesServiceConnection)
+              kubernetesServiceConnection: '$(kubernetesServiceConnection)'
               namespace: 'default'
               manifests: |
                 $(Pipeline.Workspace)/manifests/backend-deployment.yml
