@@ -43,7 +43,7 @@ stages:
         tags: |
           $(tag)
 
-    # Install Trivy on Windows agent
+    # Install Trivy on Windows agent (corrigé)
     - task: PowerShell@2
       displayName: Install Trivy
       inputs:
@@ -51,6 +51,7 @@ stages:
         script: |
           Invoke-WebRequest -Uri "https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_Windows-64bit.zip" -OutFile "trivy.zip"
           Expand-Archive -Path "trivy.zip" -DestinationPath ".\trivy"
+          if (Test-Path "C:\trivy.exe") { Remove-Item "C:\trivy.exe" -Force }
           Move-Item -Path ".\trivy\trivy.exe" -Destination "C:\trivy.exe"
           Write-Host "Trivy installed at C:\trivy.exe"
           C:\trivy.exe --version
@@ -118,7 +119,7 @@ stages:
               action: createSecret
               secretName: 'acr-secret'
               secretType: 'dockerRegistry'
-              kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+              kubernetesServiceConnection: 'LmsKubernetes'   # <- ici nom exact
               namespace: 'default'
               containerRegistryType: 'Azure Container Registry'
               azureSubscriptionEndpoint: '$(dockerRegistryServiceConnection)'
@@ -129,7 +130,7 @@ stages:
             displayName: Deploy to Kubernetes cluster
             inputs:
               action: deploy
-              kubernetesServiceConnection: '$(kubernetesServiceConnection)'
+              kubernetesServiceConnection: 'LmsKubernetes'   # <- ici aussi
               namespace: 'default'
               manifests: |
                 $(Pipeline.Workspace)/manifests/backend-deployment.yml
