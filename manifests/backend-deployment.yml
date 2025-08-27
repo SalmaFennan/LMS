@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: mylmsacr.azurecr.io/backend:v1
+        image: mylmsacr.azurecr.io/backend:$(tag)
         ports:
         - containerPort: 3000
         env:
@@ -74,3 +74,5 @@ spec:
             secretKeyRef:
               name: backend-secrets
               key: ALLOWED_HEADERS
+      imagePullSecrets:
+      - name: acr-secret   # 🔑 ajoute l’usage du secret ACR

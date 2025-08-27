@@ -15,9 +15,9 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: mylmsacr.azurecr.io/frontend:v1
+        image: mylmsacr.azurecr.io/frontend:$(tag)
         ports:
-        - containerPort: 80  # Change to 5173 if your frontend uses that port in production
+        - containerPort: 5173  # ou 5173 si ton frontend écoute sur ce port
         env:
         - name: VITE_API_BASE_URL
           valueFrom:
@@ -49,3 +49,5 @@ spec:
             secretKeyRef:
               name: frontend-secrets
               key: VITE_FEATURE_REPORTS_ENABLED
+      imagePullSecrets:
+      - name: acr-secret   # 🔑 ajoute l’usage du secret ACR
