@@ -43,26 +43,38 @@ stages:
         tags: |
           $(tag)
 
-    # Install Trivy locally on agent
-    - script: |
-        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
-        trivy --version
+    # Install Trivy on Windows agent
+    - task: PowerShell@2
       displayName: Install Trivy
+      inputs:
+        targetType: 'inline'
+        script: |
+          Invoke-WebRequest -Uri "https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_Windows-64bit.zip" -OutFile "trivy.zip"
+          Expand-Archive -Path "trivy.zip" -DestinationPath ".\trivy"
+          Move-Item -Path ".\trivy\trivy.exe" -Destination "C:\trivy.exe"
+          Write-Host "Trivy installed at C:\trivy.exe"
+          C:\trivy.exe --version
 
     # Scan backend image
-    - script: |
-        trivy image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" \
-        -o $(Build.ArtifactStagingDirectory)/junit-report-backend.xml \
-        --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryBackend):$(tag)
+    - task: PowerShell@2
       displayName: Run Trivy scan on backend image
+      inputs:
+        targetType: 'inline'
+        script: |
+          C:\trivy.exe image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" `
+            -o "$(Build.ArtifactStagingDirectory)\junit-report-backend.xml" `
+            --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryBackend):$(tag)
       continueOnError: true
 
     # Scan frontend image
-    - script: |
-        trivy image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" \
-        -o $(Build.ArtifactStagingDirectory)/junit-report-frontend.xml \
-        --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryFrontend):$(tag)
+    - task: PowerShell@2
       displayName: Run Trivy scan on frontend image
+      inputs:
+        targetType: 'inline'
+        script: |
+          C:\trivy.exe image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" `
+            -o "$(Build.ArtifactStagingDirectory)\junit-report-frontend.xml" `
+            --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryFrontend):$(tag)
       continueOnError: true
 
     # Publish Trivy scan results
@@ -70,7 +82,7 @@ stages:
       displayName: Publish Trivy scan results
       inputs:
         testResultsFormat: 'JUnit'
-        testResultsFiles: '$(Build.ArtifactStagingDirectory)/junit-report-*.xml'
+        testResultsFiles: '$(Build.ArtifactStagingDirectory)\junit-report-*.xml'
         mergeTestResults: true
         failTaskOnFailedTests: true
         testRunTitle: 'Trivy Vulnerability Scan'
