@@ -2,13 +2,13 @@ trigger:
 - main
 
 variables:
-  dockerRegistryServiceConnection: 'LmsDR' # ton service connection Docker
+  dockerRegistryServiceConnection: 'LmsDR'
+  kubernetesServiceConnection: 'LmsKubernetes'
   imageRepositoryBackend: 'backend'
   imageRepositoryFrontend: 'frontend'
   containerRegistry: 'mylmsacr.azurecr.io'
   tag: '$(Build.BuildId)'
-  vmImageName: 'ubuntu-latest'
-  trivyVersion: '0.49.1' # Update to the latest version if needed
+  trivyVersion: '0.49.1'
 
 stages:
 - stage: Build
@@ -17,7 +17,9 @@ stages:
   - job: BuildAndScan
     displayName: Build and Scan
     pool:
-      vmImage: $(vmImageName)
+      name: Default
+      demands:
+        - agent.name -equals agent-sensipro
     steps:
     # Build and push backend image
     - task: Docker@2
@@ -41,30 +43,26 @@ stages:
         tags: |
           $(tag)
 
-    # Install Trivy
+    # Install Trivy locally on agent
     - script: |
-        sudo apt-get update
-        sudo apt-get install -y wget
-        wget https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_Linux-64bit.tar.gz
-        tar zxvf trivy_$(trivyVersion)_Linux-64bit.tar.gz
-        sudo mv trivy /usr/local/bin/
+        curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
         trivy --version
       displayName: Install Trivy
 
     # Scan backend image
-    - task: CmdLine@2
+    - script: |
+        trivy image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" \
+        -o $(Build.ArtifactStagingDirectory)/junit-report-backend.xml \
+        --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryBackend):$(tag)
       displayName: Run Trivy scan on backend image
-      inputs:
-        script: |
-          trivy image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" -o $(Build.ArtifactStagingDirectory)/junit-report-backend.xml --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryBackend):$(tag)
       continueOnError: true
 
     # Scan frontend image
-    - task: CmdLine@2
+    - script: |
+        trivy image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" \
+        -o $(Build.ArtifactStagingDirectory)/junit-report-frontend.xml \
+        --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryFrontend):$(tag)
       displayName: Run Trivy scan on frontend image
-      inputs:
-        script: |
-          trivy image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" -o $(Build.ArtifactStagingDirectory)/junit-report-frontend.xml --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryFrontend):$(tag)
       continueOnError: true
 
     # Publish Trivy scan results
@@ -92,26 +90,27 @@ stages:
   jobs:
   - deployment: Deploy
     displayName: Deploy to AKS
-    environment: 'default' # pas obligatoire, juste pour suivi pipeline
+    pool:
+      name: Default
+      demands:
+        - agent.name -equals agent-sensipro
+    environment: 'myapp'
     strategy:
       runOnce:
         deploy:
           steps:
-          # Create imagePullSecret (optional if already exists in cluster)
           - task: KubernetesManifest@0
             displayName: Create imagePullSecret
             inputs:
               action: createSecret
               secretName: 'acr-secret'
               dockerRegistryEndpoint: $(dockerRegistryServiceConnection)
-              kubernetesServiceConnection: 'LmsKubernetes'
 
-          # Deploy backend and frontend
           - task: KubernetesManifest@0
             displayName: Deploy to Kubernetes cluster
             inputs:
               action: deploy
-              kubernetesServiceConnection: 'LmsKubernetes'
+              kubernetesServiceConnection: $(kubernetesServiceConnection)
               namespace: 'default'
               manifests: |
                 $(Pipeline.Workspace)/manifests/backend-deployment.yml
