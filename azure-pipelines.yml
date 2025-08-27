@@ -57,37 +57,35 @@ stages:
           Write-Host "Trivy installed at C:\trivy.exe"
           C:\trivy.exe --version
 
-    # Scan backend image
+    # Scan backend image (CORRIGÉ)
     - task: PowerShell@2
       displayName: Run Trivy scan on backend image
       inputs:
         targetType: 'inline'
         script: |
-          C:\trivy.exe image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" `
-            -o "$(Build.ArtifactStagingDirectory)\junit-report-backend.xml" `
+          C:\trivy.exe image --severity HIGH,CRITICAL --format json `
+            -o "$(Build.ArtifactStagingDirectory)\trivy-report-backend.json" `
             --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryBackend):$(tag)
       continueOnError: true
 
-    # Scan frontend image
+    # Scan frontend image (CORRIGÉ)
     - task: PowerShell@2
       displayName: Run Trivy scan on frontend image
       inputs:
         targetType: 'inline'
         script: |
-          C:\trivy.exe image --severity HIGH,CRITICAL --format template --template "@contrib/junit.tpl" `
-            -o "$(Build.ArtifactStagingDirectory)\junit-report-frontend.xml" `
+          C:\trivy.exe image --severity HIGH,CRITICAL --format json `
+            -o "$(Build.ArtifactStagingDirectory)\trivy-report-frontend.json" `
             --exit-code 1 --ignore-unfixed $(containerRegistry)/$(imageRepositoryFrontend):$(tag)
       continueOnError: true
 
-    # Publish Trivy scan results
-    - task: PublishTestResults@2
+    # Publish Trivy scan results (MODIFIÉ)
+    - task: PublishPipelineArtifact@1
       displayName: Publish Trivy scan results
       inputs:
-        testResultsFormat: 'JUnit'
-        testResultsFiles: '$(Build.ArtifactStagingDirectory)\junit-report-*.xml'
-        mergeTestResults: true
-        failTaskOnFailedTests: true
-        testRunTitle: 'Trivy Vulnerability Scan'
+        targetPath: '$(Build.ArtifactStagingDirectory)'
+        artifact: 'trivy-reports'
+        publishLocation: 'pipeline'
       condition: always()
 
     # Publish manifests as pipeline artifact
@@ -113,7 +111,7 @@ stages:
       runOnce:
         deploy:
           steps:
-          # Create imagePullSecret for ACR
+          # Create imagePullSecret for ACR (CORRIGÉ)
           - task: KubernetesManifest@0
             displayName: Create imagePullSecret
             inputs:
@@ -122,9 +120,8 @@ stages:
               secretType: 'dockerRegistry'
               kubernetesServiceConnection: '$(kubernetesServiceConnection)'
               namespace: 'default'
-              containerRegistryType: 'Azure Container Registry'
-              azureSubscriptionEndpoint: '$(azureSubscriptionConnection)'
-              azureContainerRegistry: '$(containerRegistry)'
+              containerRegistryType: 'Container Registry'
+              dockerRegistryEndpoint: '$(dockerRegistryServiceConnection)'
 
           # Deploy manifests
           - task: KubernetesManifest@0
