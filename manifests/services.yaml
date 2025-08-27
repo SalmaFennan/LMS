@@ -23,6 +23,6 @@ spec:
     app: frontend
   ports:
     - protocol: TCP
-      port: 80
-      targetPort: 5173
-  type: LoadBalancer  # ou ClusterIP si vous utilisez un Ingress
+      port: 80           # CORRIGÉ: Port externe 80
+      targetPort: 80     # CORRIGÉ: Port du container 80 (Nginx)
+  type: LoadBalancer
