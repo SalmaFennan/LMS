@@ -51,8 +51,31 @@ stages:
         targetType: 'inline'
         script: |
           Write-Host "Downloading Trivy..."
-          Invoke-WebRequest -Uri "https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_Windows-64bit.zip" -OutFile "trivy.zip"
-          Expand-Archive -Path "trivy.zip" -DestinationPath ".\trivy"
+          $url = "https://github.com/aquasecurity/trivy/releases/download/v$(trivyVersion)/trivy_$(trivyVersion)_Windows-64bit.zip"
+          $output = "trivy.zip"
+          Invoke-WebRequest -Uri $url -OutFile $output -ErrorAction Stop
+          
+          # Verify ZIP integrity
+          $zipValid = $false
+          try {
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $zip = [System.IO.Compression.ZipFile]::OpenRead($output)
+            $zipValid = $true
+            $zip.Dispose()
+          } catch {
+            Write-Host "ZIP file is corrupted, deleting and retrying..."
+            Remove-Item $output -Force
+          }
+          
+          if (-not $zipValid) {
+            Write-Host "Retrying download..."
+            Invoke-WebRequest -Uri $url -OutFile $output -ErrorAction Stop
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $zip = [System.IO.Compression.ZipFile]::OpenRead($output)
+            $zip.Dispose()
+          }
+          
+          Expand-Archive -Path $output -DestinationPath ".\trivy" -ErrorAction Stop
           if (Test-Path "C:\trivy.exe") { Remove-Item "C:\trivy.exe" -Force }
           Move-Item -Path ".\trivy\trivy.exe" -Destination "C:\trivy.exe"
           Write-Host "Trivy installed successfully at C:\trivy.exe"
