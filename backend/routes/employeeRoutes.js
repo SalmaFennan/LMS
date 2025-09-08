@@ -9,6 +9,6 @@ router.put('/:id', employeeController.update);
 router.delete('/:id', employeeController.delete);
 router.get('/stats/dashboard', employeeController.getDashboardStats);
 router.get('/search', employeeController.search);
-router.post('/payroll', employeeController.processPayroll); // New route
+router.post('/payroll', employeeController.processPayroll); 
 
 module.exports = router;

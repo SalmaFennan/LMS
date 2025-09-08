@@ -1,5 +1,5 @@
 {
-  "name": "backendSalleDeSport",
+  "name": "backend",
   "version": "1.0.0",
   "description": "Backend pour l'application de gestion de salle de sport",
   "main": "app.js",

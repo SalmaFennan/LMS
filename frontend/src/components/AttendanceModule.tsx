@@ -64,7 +64,7 @@ export const AttendanceModule: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">Gestion des Présences</h1>
-          <p className="text-gray-600">Suivi des entrées et sorties des membres</p>
+          <p className="text-gray-600">Suivi des adhérents</p>
         </div>
         <div className="flex items-center gap-4">
           <input
@@ -103,7 +103,7 @@ export const AttendanceModule: React.FC = () => {
           <div className="text-white text-center">
             <TrendingUp size={48} className="mx-auto mb-2" />
             <p className="text-lg">Graphique de présence</p>
-            <p className="text-sm opacity-75">Moyenne: 35 membres/jour</p>
+            <p className="text-sm opacity-75">Moyenne: 35 adhérent/jour</p>
           </div>
         </div>
       </div>

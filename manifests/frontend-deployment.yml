@@ -19,28 +19,28 @@ spec:
       - name: frontend
         image: mylmsacr.azurecr.io/frontend:v4
         ports:
-        - containerPort: 80  # CORRIGÉ: Nginx écoute sur le port 80
+        - containerPort: 80  
         resources:
           requests:
-            memory: "128Mi"   # Increased from 64Mi for stability
-            cpu: "100m"      # Increased from 50m
+            memory: "128Mi"   
+            cpu: "100m"      
           limits:
-            memory: "256Mi"   # Increased from 128Mi
-            cpu: "300m"      # Increased from 200m
-        # Health checks corrigés pour Nginx
+            memory: "256Mi"   
+            cpu: "300m"      
+
         livenessProbe:
           httpGet:
             path: /
-            port: 80         # CORRIGÉ: Port 80 au lieu de 5173
-          initialDelaySeconds: 30  # Increased from 15 for robustness
+            port: 80         
+          initialDelaySeconds: 30  
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
         readinessProbe:
           httpGet:
             path: /
-            port: 80         # CORRIGÉ: Port 80 au lieu de 5173
-          initialDelaySeconds: 10  # Increased from 5
+            port: 80         
+          initialDelaySeconds: 10  
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3

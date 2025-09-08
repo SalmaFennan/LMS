@@ -14,10 +14,10 @@ spec:
         app: backend
     spec:
       imagePullSecrets:
-      - name: acr-secret   # 🔑 UN SEUL imagePullSecret ici
+      - name: acr-secret 
       containers:
       - name: backend
-        image: mylmsacr.azurecr.io/backend:placeholder # sera remplacé par le pipeline
+        image: mylmsacr.azurecr.io/backend:placeholder 
         ports:
         - containerPort: 3000
         resources:

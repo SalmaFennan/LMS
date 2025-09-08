@@ -7,7 +7,7 @@ router.get('/transactions/overview', transactionController.getFinancialOverview)
 router.post('/transactions', transactionController.create);
 router.get('/transactions/memberships', transactionController.getMembershipPayments);
 router.get('/transactions/evolution', transactionController.getRevenueEvolution);
-router.get('/transactions/revenue-by-membership-type', transactionController.getRevenueByMembershipType); // Match this with frontend
+router.get('/transactions/revenue-by-membership-type', transactionController.getRevenueByMembershipType); 
 router.get('/transactions/monthly-revenue', transactionController.getMonthlyRevenue);
 router.get('/transactions/monthly-expenses', transactionController.getMonthlyExpenses);
 

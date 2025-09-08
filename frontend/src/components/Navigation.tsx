@@ -6,8 +6,7 @@ import {
   Calendar, 
   DollarSign, 
   ShoppingCart, 
-  ClipboardList,
-  Dumbbell
+  ClipboardList
 } from 'lucide-react';
 
 interface NavigationProps {
@@ -27,15 +26,30 @@ export const Navigation: React.FC<NavigationProps> = ({ activeModule, setActiveM
   ];
 
   return (
-    <nav className="bg-blue-600 text-white w-64 min-h-screen p-4">
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-2">
-          <Dumbbell size={32} />
-          <h1 className="text-xl font-bold">GymManager Pro</h1>
+<nav className="bg-red-500 text-white w-72 min-h-screen p-4">
+        {/* Logo + titre */}
+      <div className="mb-10">
+        <div className="flex items-center gap-3 mb-2">
+          {/* Logo image */}
+          <img 
+            src="/dataprotect.png" 
+            alt="Logo" 
+            className="h-12 w-auto object-contain bg-white rounded-md p-1 shadow-sm"
+          />  
+
+          {/* Texte à côté du logo */}
+          <span className="text-xl font-bold text-white whitespace-nowrap">
+            Sensi-Pro
+          </span>
         </div>
-        <p className="text-blue-200 text-sm">Gestion de Salle de Sport</p>
+        
+        <p className="text-red-100 text-sm leading-snug">
+          DATAPROTECT une sécurité unifiée <br />
+          un interlocuteur unique
+        </p>
       </div>
-      
+
+      {/* Menu */}
       <ul className="space-y-2">
         {menuItems.map((item) => {
           const Icon = item.icon;
@@ -45,12 +59,12 @@ export const Navigation: React.FC<NavigationProps> = ({ activeModule, setActiveM
                 onClick={() => setActiveModule(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   activeModule === item.id 
-                    ? 'bg-blue-700 text-white' 
-                    : 'hover:bg-blue-500 text-blue-100'
+                    ? 'bg-red-600 text-white shadow-md' 
+                    : 'hover:bg-red-400 text-red-50'
                 }`}
               >
                 <Icon size={20} />
-                <span>{item.label}</span>
+                <span className="truncate">{item.label}</span>
               </button>
             </li>
           );

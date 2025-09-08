@@ -81,7 +81,7 @@ stages:
           Write-Host "Trivy installed successfully at C:\trivy.exe"
           C:\trivy.exe --version
 
-    # Scan backend image - VERSION CORRIGÉE
+    # Scan backend image 
     - task: PowerShell@2
       displayName: Run Trivy scan on backend image
       inputs:
@@ -101,16 +101,16 @@ stages:
           
           # Vérifier que le fichier rapport a été créé
           if (Test-Path "$(Build.ArtifactStagingDirectory)\trivy-report-backend.json") {
-            Write-Host "✅ Backend security report generated successfully"
+            Write-Host " Backend security report generated successfully"
             $reportSize = (Get-Item "$(Build.ArtifactStagingDirectory)\trivy-report-backend.json").Length
             Write-Host "Report size: $reportSize bytes"
           } else {
-            Write-Host "❌ Failed to generate backend security report"
+            Write-Host " Failed to generate backend security report"
             # Créer un fichier vide pour éviter les erreurs de publication
             New-Item -Path "$(Build.ArtifactStagingDirectory)\trivy-report-backend.json" -ItemType File -Value '[]'
           }
 
-    # Scan frontend image - VERSION CORRIGÉE
+    # Scan frontend image 
     - task: PowerShell@2
       displayName: Run Trivy scan on frontend image
       inputs:
@@ -130,16 +130,15 @@ stages:
           
           # Vérifier que le fichier rapport a été créé
           if (Test-Path "$(Build.ArtifactStagingDirectory)\trivy-report-frontend.json") {
-            Write-Host "✅ Frontend security report generated successfully"
+            Write-Host " Frontend security report generated successfully"
             $reportSize = (Get-Item "$(Build.ArtifactStagingDirectory)\trivy-report-frontend.json").Length
             Write-Host "Report size: $reportSize bytes"
           } else {
-            Write-Host "❌ Failed to generate frontend security report"
+            Write-Host " Failed to generate frontend security report"
             # Créer un fichier vide pour éviter les erreurs de publication
             New-Item -Path "$(Build.ArtifactStagingDirectory)\trivy-report-frontend.json" -ItemType File -Value '[]'
           }
 
-    # Publish Trivy scan results
     - task: PublishPipelineArtifact@1
       displayName: Publish Trivy scan results
       inputs:
@@ -148,7 +147,6 @@ stages:
         publishLocation: 'pipeline'
       condition: always()
 
-    # Publish manifests as pipeline artifact
     - task: PublishPipelineArtifact@1
       displayName: Publish Kubernetes manifests
       inputs:
@@ -172,7 +170,6 @@ stages:
       runOnce:
         deploy:
           steps:
-          # Nettoyer les anciens déploiements si nécessaire
           - task: Kubernetes@1
             displayName: Cleanup old deployments
             inputs:
@@ -183,7 +180,6 @@ stages:
               arguments: 'deployment backend frontend'
             continueOnError: true
 
-          # Nettoyer l'ancien secret ACR seulement
           - task: Kubernetes@1
             displayName: Cleanup old ACR secret
             inputs:
@@ -194,7 +190,6 @@ stages:
               arguments: 'secret acr-secret'
             continueOnError: true
 
-          # Appliquer vos secrets personnalisés AVANT de créer le secret ACR
           - task: KubernetesManifest@0
             displayName: Apply custom secrets (backend & frontend)
             inputs:
@@ -216,7 +211,6 @@ stages:
               containerRegistryType: 'Container Registry'
               dockerRegistryEndpoint: '$(dockerRegistryServiceConnection)'
 
-          # Attendre un peu pour que les secrets soient créés
           - task: PowerShell@2
             displayName: Wait for secrets creation
             inputs:
